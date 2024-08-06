@@ -131,10 +131,10 @@ def extract(driver: webdriver.Chrome, max_page_num: int) -> pd.DataFrame:
     data = {
         'num': [],
         'date': [],
-        'author': [],
+        'view': [],
+        'like': [],
         'title': [],
         'content': [],
-        'images': [],
         'comments': []
     }
     max_page_num = 10000 if max_page_num == -1 else max_page_num
@@ -155,10 +155,10 @@ def extract(driver: webdriver.Chrome, max_page_num: int) -> pd.DataFrame:
                     if flag:
                         data['num'].append(sub_data['num'])
                         data['date'].append(sub_data['date'])
-                        data['author'].append(sub_data['author'])
+                        data['view'].append(sub_data['view'])
+                        data['like'].append(sub_data['like'])
                         data['title'].append(sub_data['title'])
                         data['content'].append(sub_data['content'])
-                        data['images'].append(sub_data['images'])
                         data['comments'].append(sub_data['comments'])
 
                     driver.close()
@@ -196,8 +196,8 @@ def extract(driver: webdriver.Chrome, max_page_num: int) -> pd.DataFrame:
 
     df = pd.DataFrame(
         data, columns=[
-            'num', 'date', 'author',
-            'title', 'content', 'images', 'comments'
+            'num', 'date', 'view', 'like',
+            'title', 'content', 'comments'
         ])
     return df
 
@@ -221,15 +221,21 @@ def extract_post_info(driver: webdriver.Chrome):
         print(f"게시물 번호: {cont_num}")
         cont_date = "" if driver.find_element(
             By.CLASS_NAME, 'date').text == "" else driver.find_element(By.CLASS_NAME, 'date').text
-        cont_author = "" if driver.find_element(
-            By.CLASS_NAME, 'nickname').text == "" else \
-            driver.find_element(By.CLASS_NAME, 'nickname').text
         cont_title = "" if driver.find_element(
             By.CLASS_NAME, 'title_text').text == "" else \
             driver.find_element(By.CLASS_NAME, 'title_text').text
+        cont_view = "0" if driver.find_element(
+            By.CLASS_NAME, 'count').text == "" else \
+            driver.find_element(By.CLASS_NAME, 'count').text
 
+        like_cnt = driver.find_element(By.CLASS_NAME, 'like_article')
+        cont_like = "0"
+        try:
+            cont_like = like_cnt.find_element(
+                By.CSS_SELECTOR, 'em.u_cnt._count').text
+        except:
+            pass
         content_texts = ""
-        content_img_urls = []
 
         try:
             content_container = driver.find_element(
@@ -241,12 +247,14 @@ def extract_post_info(driver: webdriver.Chrome):
                 if cont_value.get_attribute("class") == "se-component se-text se-l-default":
                     cont_text = cont_value.text
                     content_texts += cont_text+"\n"
-                elif cont_value.get_attribute("class") == "se-component se-image se-l-default":
-                    cont_url = cont_value.find_element(
-                        By.TAG_NAME, 'img').get_attribute('src')
-                    content_img_urls.append(cont_url)
                 else:
                     continue
+
+                # if use image
+                # elif cont_value.get_attribute("class") == "se-component se-image se-l-default":
+                # cont_url = cont_value.find_element(
+                #     By.TAG_NAME, 'img').get_attribute('src')
+                # content_img_urls.append(cont_url)
         except:
             print("게시물 내용이 존재하지 않습니다")
 
@@ -272,10 +280,10 @@ def extract_post_info(driver: webdriver.Chrome):
         return True, {
             'num': cont_num,
             'date': cont_date,
-            'author': cont_author,
             'title': cont_title,
+            'view': cont_view,
+            'like': cont_like,
             'content': content_texts,
-            'images': content_img_urls,
             'comments': comments
         }
 
@@ -298,14 +306,15 @@ def transform(df: pd.DataFrame) -> pd.DataFrame:
     # 날짜와 시간을 각각의 열로 분리
     df['date'] = df['datetime'].dt.date
     df['time'] = df['datetime'].dt.time
+    df['view'] = df['view'].str.replace("조회 ", "")
     df.rename(
         columns={
-            'num': 'post_id', 'date': 'Date', 'title': 'Title',
-            'time': 'Time', 'content': 'Body', 'comments': 'Comment'
+            'num': 'post_id', 'date': 'Date', 'title': 'Title', 'view': 'View',
+            'like': 'Like', 'time': 'Time', 'content': 'Body', 'comments': 'Comment'
         },
         inplace=True
     )
-    df.drop(['author', 'images', 'datetime'], axis=1, inplace=True)
+    df.drop(['datetime'], axis=1, inplace=True)
 
     return df
 
@@ -324,6 +333,8 @@ def load(df: pd.DataFrame, datetime: str, save_path: str):
         | ------- | ---------- | -------- | ----- | ---- | ------- |
         | 1       | 2023-08-01 | 12:00:00 | 제목1  | 내용  | 댓글1    |
     """
+    if not os.path.exists('data/'):
+        os.makedirs('data/')
     df.to_csv(f"data/{datetime}_{save_path}", index=False)
 
 
