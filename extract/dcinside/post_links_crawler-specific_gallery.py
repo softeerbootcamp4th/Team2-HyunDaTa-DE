@@ -17,8 +17,6 @@ import sys
 import os
 from time import sleep
 
-# ub-content.us-post gall_tit.ub-word
-# https://gall.dcinside.com/board/lists/?id=car_new1&page=111&search_pos=-9613353&s_type=search_subject_memo&s_keyword=.EA.B8.B0
 def get_semi_formatted_url(board_id, query):
     unformatted_url = "https://gall.dcinside.com/board/lists/?s_type=search_subject_memo&id={}&s_keyword={}&search_pos=-{}&page={}"
     encoded_query = urllib.parse.quote(query).replace('%', '.')
@@ -114,7 +112,6 @@ def load(query, df):
 
 start_search_pos = 6180000
 end_search_pos = 9700000
-end_search_pos = 6190000
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
