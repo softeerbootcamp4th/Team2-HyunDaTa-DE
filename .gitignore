@@ -1,0 +1,13 @@
+.DS_STORE
+.venv
+*.csv
+*.parquet
+.python-version
+pyproject.toml
+poetry.lock
+__pycache__
+*.env
+data
+chromedriver
+crawl.sh
+*.db
