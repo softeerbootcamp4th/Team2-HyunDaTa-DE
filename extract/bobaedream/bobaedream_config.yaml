@@ -1,0 +1,15 @@
+Community:
+  bobaedream:
+    free: "https://www.bobaedream.co.kr/list?code=freeb&s_cate=&maker_no=&model_no=&or_gu=10&or_se=desc&s_selday=&pagescale=70&info3=&noticeShow=&s_select=Body&level_no=&vdate=&type=list&page=1"
+    domestic: "https://www.bobaedream.co.kr/list?code=national&s_cate=&maker_no=&model_no=&or_gu=10&or_se=desc&s_selday=&pagescale=70&info3=&noticeShow=&s_select=Body&s_key=&level_no=&vdate=&type=list&page=1"
+Keyword:
+  Car: ["아이오닉"]
+filter_words:
+  - 냄새
+  - 누수
+  - 쉰내
+  - 쉰 내
+  - 악취
+  - 곰팡이
+  - 물 새
+  - 물새
