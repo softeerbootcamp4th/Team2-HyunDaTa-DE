@@ -11,3 +11,4 @@ data
 chromedriver
 crawl.sh
 *.db
+venv
