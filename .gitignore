@@ -12,3 +12,4 @@ chromedriver
 crawl.sh
 *.db
 venv
+logs

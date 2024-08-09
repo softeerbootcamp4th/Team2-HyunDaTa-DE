@@ -1,0 +1,9 @@
+community_sites:
+  autoview: https://cdn.autoview.co.kr/rss/gns_allArticle.xml
+  motorgraph:  https://cdn.motorgraph.com/rss/gns_allArticle.xml
+  autoelectronics: https://www.autoelectronics.co.kr/rss/
+  gpkorea: https://www.gpkorea.com/rss/allArticle.xml
+  autoherald: https://www.autoherald.co.kr/rss/gns_allArticle.xml
+  carguy: http://www.carguy.kr/rss/allArticle.xml
+  motoya: https://www.motoya.co.kr/rss/allArticle.xml
+  autotimes: http://autotimes.co.kr/happynews_rss.php
