@@ -60,6 +60,7 @@ x-airflow-common:
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true' # Required for XCom to work with CeleryExecutor
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
@@ -283,6 +284,13 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+
+  selenium:
+      container_name: remote_chromedriver
+      image: seleniarm/standalone-chromium:latest
+      ports:
+        - 4444:4444
+      restart: always     
 
 volumes:
   postgres-db-volume:
