@@ -17,7 +17,7 @@
     - 크롤러를 주어진 기간 동안 월 단위로 실행하는 배치 스크립트
     - 전체 크롤링이 마무리 되면 크롤링 된 결과를 merged 디렉터리에 하나로 병합
     - 크롤링의 소요 시간이 길어 안정성을 보장하고자 할 때 사용
-    - Run command: `./batch_crawler-monthly.sh <query> <start_datetime> <end_datetime>`
+    - Run command: `./dcinside_monthly_crawler.sh <query> <start_datetime> <end_datetime>`
 - **csv_to_db.py**
     - 크롤링한 데이터를 CSV 파일에서 데이터베이스로 변환
     - Run command: `python3 csv_to_db.py <dcinside_crawling_result_csv_file>`

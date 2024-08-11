@@ -50,13 +50,15 @@ class DC_Inside_Crawler:
             
             print(f"[INFO] 배치 크롤링 시작\n")
             batch_df = self._get_batch_post_contents_df(batch_post_urls, num_processes)
-            total_df = pd.concat([total_df, batch_df])
             print(f"[INFO] 배치 크롤링 종료\n")
-            if len(total_df) != 0:
-                print(total_df.iloc[-1])
 
-            last_post_datetime = pd.to_datetime(batch_df.iloc[-1]['Date'] + ' ' + batch_df.iloc[-1]['Time'])
-            if last_post_datetime < self.start_datetime:
+            total_df = pd.concat([total_df, batch_df])
+            last_post_datetime = None
+            if len(batch_df) != 0:
+                last_post_datetime = pd.to_datetime(batch_df.iloc[-1]['Date'] + ' ' + batch_df.iloc[-1]['Time'])
+                print(batch_df.iloc[-1])
+
+            if last_post_datetime is not None and last_post_datetime < self.start_datetime:
                 print("[INFO] 전체 크롤링 종료\n")
                 break
 
@@ -192,7 +194,7 @@ class DC_Inside_Crawler:
         def _get_post_body(soup):
             write_div = soup.select_one("div.write_div")
             body = ''
-            if write_div:
+            if write_div is not None:
                 # 특정 클래스의 요소들을 제거
                 excluded_classes = ['imgwrap', 'og-div']
                 for excluded_class in excluded_classes:
@@ -226,21 +228,21 @@ class DC_Inside_Crawler:
             return up, down
         
         ##########################################################################################
-        title = date = time = num_views = num_comments = dc_app = up = down = body = comments = None
+        title = date = time = views = num_comments = dc_app = like = dislike = body = comments = None
         for _ in range(MAX_PAGE_ACCESS):
             try:
                 soup = self._get_url_soup(driver, url)
                 title = soup.select_one('h3.title.ub-word span.title_subject').text
                 date, time = soup.select_one('div.fl span.gall_date').text.split()
-                _, num_views, _, _, _, num_comments = soup.select("div.fr")[1].text.split()
+                _, views, _, _, _, num_comments = soup.select("div.fr")[1].text.split()
                 dc_app, body = _get_post_body(soup)
                 comments = _get_post_comments(soup)
-                up, down = _get_post_up_down(soup)
+                like, dislike = _get_post_up_down(soup)
                 if not body:
                     raise Exception("본문 크롤링 실패")
                 if int(num_comments) > 0 and comments is None:
                     raise Exception("댓글 크롤링 실패")
-                if up is None: # up만 확인하는 이유: 가끔 비추가 아예 없는 글이 있음
+                if like is None: # up만 확인하는 이유: 가끔 비추가 아예 없는 글이 있음
                     raise Exception("추천 수 크롤링 실패")
 
                 print(f"[INFO] 게시글 크롤링 완료 - {url}\n")
@@ -251,7 +253,7 @@ class DC_Inside_Crawler:
             print(f"[ERROR] 게시글 크롤링 실패 - {url}\n")
         
         # 공통 + dcinside
-        return (title, date, time, body, comments, num_views, up, 'dcinside', url) + (num_comments, dc_app, down)
+        return (title, date, time, body, comments, views, like, 'dcinside', url) + (num_comments, dc_app, dislike)
 
 
 def extract(query, start_datetime, end_datetime):
