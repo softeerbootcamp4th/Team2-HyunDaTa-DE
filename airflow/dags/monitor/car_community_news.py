@@ -91,11 +91,12 @@ def fetch_recent_news(**kwargs):
 
 def check_branch(**kwargs):
     task_id = kwargs['task_id']
+    upload_s3_task_id = kwargs['upload_task_id']
     save_filename = kwargs['ti'].xcom_pull(task_ids=task_id)
     if save_filename is None:
         return 'no_search_post'
     else:
-        return 'upload_file_to_s3'
+        return upload_s3_task_id
 
 
 def no_search_post(**kwargs):
@@ -126,229 +127,47 @@ def upload_file_to_s3(**kwargs):
     os.remove(f"/tmp/{key}")
 
 
-################# define tasks #################
-autoview_task = PythonOperator(
-    task_id='autoview_news_monitor',
-    python_callable=fetch_recent_news,
-    provide_context=True,
-    op_kwargs={'comm_name': 'autoview'},
-    dag=dag,
-)
-
-motorgraph_task = PythonOperator(
-    task_id='motorgraph_news_monitor',
-    python_callable=fetch_recent_news,
-    provide_context=True,
-    op_kwargs={'comm_name': 'motorgraph'},
-    dag=dag,
-)
-
-autoelectronics_task = PythonOperator(
-    task_id='autoelectronics_news_monitor',
-    python_callable=fetch_recent_news,
-    provide_context=True,
-    op_kwargs={'comm_name': 'autoelectronics'},
-    dag=dag,
-)
-
-gp_korea_task = PythonOperator(
-    task_id='gp_korea_news_monitor',
-    python_callable=fetch_recent_news,
-    op_kwargs={'comm_name': 'gpkorea'},
-    provide_context=True,
-    dag=dag,
-)
-
-autoherald_task = PythonOperator(
-    task_id='autoherald_news_monitor',
-    python_callable=fetch_recent_news,
-    op_kwargs={'comm_name': 'autoherald'},
-    provide_context=True,
-    dag=dag,
-)
-
-carguy_task = PythonOperator(
-    task_id='carguy_news_monitor',
-    python_callable=fetch_recent_news,
-    provide_context=True,
-    op_kwargs={'comm_name': 'carguy'},
-    dag=dag,
-)
-
-motoya_task = PythonOperator(
-    task_id='motoya_news_monitor',
-    python_callable=fetch_recent_news,
-    provide_context=True,
-    op_kwargs={'comm_name': 'motoya'},
-    dag=dag,
-)
-
-autotimes_task = PythonOperator(
-    task_id='autotimes_news_monitor',
-    python_callable=fetch_recent_news,
-    provide_context=True,
-    op_kwargs={'comm_name': 'autotimes'},
-    dag=dag,
-)
-
-################# define branch #################
-autoview_branch_task = BranchPythonOperator(
-    task_id='autoview_branch_task',
-    python_callable=check_branch,
-    provide_context=True,
-    op_kwargs={'task_id': 'autoview_news_monitor'},
-    dag=dag,
-)
-
-motorgraph_branch_task = BranchPythonOperator(
-    task_id='motorgraph_branch_task',
-    python_callable=check_branch,
-    provide_context=True,
-    op_kwargs={'task_id': 'motorgraph_news_monitor'},
-    dag=dag,
-)
-
-autoelectronics_branch_task = BranchPythonOperator(
-    task_id='autoelectronics_branch_task',
-    python_callable=check_branch,
-    provide_context=True,
-    op_kwargs={'task_id': 'autoelectronics_news_monitor'},
-    dag=dag,
-)
-
-gp_korea_branch_task = BranchPythonOperator(
-    task_id='gp_korea_branch_task',
-    python_callable=check_branch,
-    provide_context=True,
-    op_kwargs={'task_id': 'gp_korea_news_monitor'},
-    dag=dag,
-)
-
-autoherald_branch_task = BranchPythonOperator(
-    task_id='autoherald_branch_task',
-    python_callable=check_branch,
-    provide_context=True,
-    op_kwargs={'task_id': 'autoherald_news_monitor'},
-    dag=dag,
-)
-
-carguy_branch_task = BranchPythonOperator(
-    task_id='carguy_branch_task',
-    python_callable=check_branch,
-    provide_context=True,
-    op_kwargs={'task_id': 'carguy_news_monitor'},
-    dag=dag,
-)
-
-motoya_branch_task = BranchPythonOperator(
-    task_id='motoya_branch_task',
-    python_callable=check_branch,
-    provide_context=True,
-    op_kwargs={'task_id': 'motoya_news_monitor'},
-    dag=dag,
-)
-
-autotimes_branch_task = BranchPythonOperator(
-    task_id='autotimes_branch_task',
-    python_callable=check_branch,
-    provide_context=True,
-    op_kwargs={'task_id': 'autotimes_news_monitor'},
-    dag=dag,
-)
-
-################# define after branch #################
-no_search_post = PythonOperator(
-    task_id='no_search_post',
+no_search_post_task = PythonOperator(
+    task_id=f'no_search_post',
     python_callable=no_search_post,
     provide_context=True,
     dag=dag,
 )
 
-autoview_upload_file_to_s3 = PythonOperator(
-    task_id='autoview_upload_file_to_s3',
-    python_callable=upload_file_to_s3,
-    provide_context=True,
-    op_kwargs={'task_id': 'autoview_news_monitor'},
-    dag=dag,
-)
 
-motorgraph_upload_file_to_s3 = PythonOperator(
-    task_id='motorgraph_upload_file_to_s3',
-    python_callable=upload_file_to_s3,
-    provide_context=True,
-    op_kwargs={'task_id': 'motorgraph_news_monitor'},
-    dag=dag,
-)
+def create_news_monitoring_tasks(comm_name, dag):
+    monitor_task = PythonOperator(
+        task_id=f'{comm_name}_news_monitor',
+        python_callable=fetch_recent_news,
+        provide_context=True,
+        op_kwargs={'comm_name': comm_name},
+        dag=dag,
+    )
 
-autoelectronics_upload_file_to_s3 = PythonOperator(
-    task_id='autoelectronics_upload_file_to_s3',
-    python_callable=upload_file_to_s3,
-    provide_context=True,
-    op_kwargs={'task_id': 'autoelectronics_news_monitor'},
-    dag=dag,
-)
+    upload_task = PythonOperator(
+        task_id=f'{comm_name}_upload_file_to_s3',
+        python_callable=upload_file_to_s3,
+        provide_context=True,
+        op_kwargs={'task_id': f'{comm_name}_news_monitor'},
+        dag=dag,
+    )
 
-gp_korea_upload_file_to_s3 = PythonOperator(
-    task_id='gp_korea_upload_file_to_s3',
-    python_callable=upload_file_to_s3,
-    provide_context=True,
-    op_kwargs={'task_id': 'gp_korea_news_monitor'},
-    dag=dag,
-)
+    branch_task = BranchPythonOperator(
+        task_id=f'{comm_name}_branch_task',
+        python_callable=check_branch,
+        provide_context=True,
+        op_kwargs={
+            'task_id': f'{comm_name}_news_monitor',
+            'upload_task_id': f'{comm_name}_upload_file_to_s3'
+        },
+        dag=dag,
+    )
 
-autoherald_upload_file_to_s3 = PythonOperator(
-    task_id='autoherald_upload_file_to_s3',
-    python_callable=upload_file_to_s3,
-    provide_context=True,
-    op_kwargs={'task_id': 'autoherald_news_monitor'},
-    dag=dag,
-)
+    monitor_task >> branch_task >> [no_search_post_task, upload_task]
 
-carguy_upload_file_to_s3 = PythonOperator(
-    task_id='carguy_upload_file_to_s3',
-    python_callable=upload_file_to_s3,
-    provide_context=True,
-    op_kwargs={'task_id': 'carguy_news_monitor'},
-    dag=dag,
-)
 
-motoya_upload_file_to_s3 = PythonOperator(
-    task_id='motoya_upload_file_to_s3',
-    python_callable=upload_file_to_s3,
-    provide_context=True,
-    op_kwargs={'task_id': 'motoya_news_monitor'},
-    dag=dag,
-)
+communities = ['autoview', 'motorgraph', 'autoelectronics',
+               'gpkorea', 'autoherald', 'carguy', 'motoya', 'autotimes']
 
-autotimes_upload_file_to_s3 = PythonOperator(
-    task_id='autotimes_upload_file_to_s3',
-    python_callable=upload_file_to_s3,
-    provide_context=True,
-    op_kwargs={'task_id': 'autotimes_news_monitor'},
-    dag=dag,
-)
-
-################# define workflow #################
-autoview_task >> autoview_branch_task >> [
-    no_search_post, autoview_upload_file_to_s3]
-
-motorgraph_task >> motorgraph_branch_task >> [
-    no_search_post, motorgraph_upload_file_to_s3]
-
-autoelectronics_task >> autoelectronics_branch_task >> [
-    no_search_post, autoelectronics_upload_file_to_s3]
-
-gp_korea_task >> gp_korea_branch_task >> [
-    no_search_post, gp_korea_upload_file_to_s3]
-
-autoherald_task >> autoherald_branch_task >> [
-    no_search_post, autoherald_upload_file_to_s3]
-
-carguy_task >> carguy_branch_task >> [
-    no_search_post, carguy_upload_file_to_s3]
-
-motoya_task >> motoya_branch_task >> [
-    no_search_post, motoya_upload_file_to_s3]
-
-autotimes_task >> autotimes_branch_task >> [
-    no_search_post, autotimes_upload_file_to_s3]
+for community in communities:
+    create_news_monitoring_tasks(community, dag)
