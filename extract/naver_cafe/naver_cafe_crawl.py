@@ -249,12 +249,6 @@ def extract_post_info(driver: webdriver.Chrome):
                     content_texts += cont_text+"\n"
                 else:
                     continue
-
-                # if use image
-                # elif cont_value.get_attribute("class") == "se-component se-image se-l-default":
-                # cont_url = cont_value.find_element(
-                #     By.TAG_NAME, 'img').get_attribute('src')
-                # content_img_urls.append(cont_url)
         except:
             print("게시물 내용이 존재하지 않습니다")
 
@@ -292,7 +286,7 @@ def extract_post_info(driver: webdriver.Chrome):
         return False, {}
 
 
-def transform(df: pd.DataFrame) -> pd.DataFrame:
+def transform(df: pd.DataFrame, keyword: str) -> pd.DataFrame:
     """Transform the extracted data to DataFrame
     Args:
         df (pd.DataFrame): Extracted data from Naver Cafe
@@ -300,26 +294,31 @@ def transform(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Transformed DataFrame
     """
-    df['num'] = [i for i in range(1, len(df['num'])+1)]
-    df['datetime'] = pd.to_datetime(df['date'], format='%Y.%m.%d. %H:%M')
+    try:
+        df['num'] = [i for i in range(1, len(df['num'])+1)]
+        df['datetime'] = pd.to_datetime(df['date'], format='%Y.%m.%d. %H:%M')
 
-    # 날짜와 시간을 각각의 열로 분리
-    df['date'] = df['datetime'].dt.date
-    df['time'] = df['datetime'].dt.time
-    df['view'] = df['view'].str.replace("조회 ", "")
-    df.rename(
-        columns={
-            'num': 'post_id', 'date': 'Date', 'title': 'Title', 'view': 'View',
-            'like': 'Like', 'time': 'Time', 'content': 'Body', 'comments': 'Comment'
-        },
-        inplace=True
-    )
-    df.drop(['datetime'], axis=1, inplace=True)
+        # 날짜와 시간을 각각의 열로 분리
+        df['date'] = df['datetime'].dt.date
+        df['time'] = df['datetime'].dt.time
+        df['view'] = df['view'].str.replace("조회 ", "")
+        df['Community'] = "naver_cafe"
+        df['CarName'] = keyword
+        df.rename(
+            columns={
+                'num': 'post_id', 'date': 'Date', 'title': 'Title', 'view': 'View',
+                'like': 'Like', 'time': 'Time', 'content': 'Body', 'comments': 'Comment'
+            },
+            inplace=True
+        )
+        df.drop(['datetime'], axis=1, inplace=True)
+        return df
+    except:
+        print("추출한 게시물이 존재하지 않습니다")
+        return False
 
-    return df
 
-
-def load(df: pd.DataFrame, datetime: str, save_path: str):
+def load(df: pd.DataFrame, datetime: str, keyword: str, save_path: str):
     """Load the transformed data to csv file
 
     Args:
@@ -333,9 +332,9 @@ def load(df: pd.DataFrame, datetime: str, save_path: str):
         | ------- | ---------- | -------- | ----- | ---- | ------- |
         | 1       | 2023-08-01 | 12:00:00 | 제목1  | 내용  | 댓글1    |
     """
-    if not os.path.exists('data/'):
-        os.makedirs('data/')
-    df.to_csv(f"data/{datetime}_{save_path}", index=False)
+    if not os.path.exists(f'data/{keyword}/'):
+        os.makedirs(f'data/{keyword}/')
+    df.to_csv(f"data/{keyword}/{datetime}_{save_path}", index=False)
 
 
 if __name__ == '__main__':
@@ -344,7 +343,7 @@ if __name__ == '__main__':
                         default="./chromedriver", help="Chrome driver path")
     parser.add_argument("--login_info", type=str, default="login_info.env",
                         help="네이버 로그인 (ID, PW) 정보가 담긴 env 파일 경로")
-    parser.add_argument("--cafe_url", type=str, default="https://cafe.naver.com/cafeclip/",
+    parser.add_argument("--cafe_url", type=str, default="https://cafe.naver.com/naworl",
                         help="Cafe URL")
     parser.add_argument("--start_date", type=str, default="2023-08-05",
                         help="탐색 시작 날짜")
@@ -352,7 +351,7 @@ if __name__ == '__main__':
                         help="탐색 종료 날짜")
     parser.add_argument("--search_type", type=str, default="게시글 + 댓글",
                         help="Search type: 제목만 or 게시글 + 댓글")
-    parser.add_argument("--keyword", type=str, default="아이오닉",
+    parser.add_argument("--keyword", type=str, default="팰리세이드",
                         help="Keyword for searching")
     parser.add_argument("--select_all", type=str, default="",
                         help="상세 검색 중 '다음 단어 모두 포함' 항목")
@@ -364,7 +363,7 @@ if __name__ == '__main__':
                         help="상세 검색 중 '정확히 일치' 항목")
     parser.add_argument("--max_page_num", type=int, default=-1,
                         help="추출할 서브 페이지 수")
-    parser.add_argument("--save_path", type=str, default="ioniq_naver_cafe.csv",
+    parser.add_argument("--save_path", type=str, default="naver_cafe.csv",
                         help="저장 경로")
     args = parser.parse_args()
 
@@ -405,8 +404,10 @@ if __name__ == '__main__':
     }
     search_keyword(driver, keyword_dict)
     extract_data = extract(driver, args.max_page_num)
-    transform_data = transform(extract_data)
-    load(transform_data, args.start_date, args.save_path)
+    transform_data = transform(extract_data, args.keyword)
+
+    if isinstance(transform_data, pd.DataFrame):
+        load(transform_data, args.start_date, args.keyword, args.save_path)
 
     # 드라이버 종료
     driver.quit()
