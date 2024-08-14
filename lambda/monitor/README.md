@@ -3,21 +3,26 @@ AWS Lambda에서 selenium 크롤링을 위해 사용할 Docker 컨테이너 이�
 
 ## 크롤링하는 AWS Lambda
 `labmda-crawler` 디렉터리입니다.
+
 도커 컨테이너 이미지 위에서 크롤링을 수행합니다.
+
 `/extract` 디렉터리에서 사용한 크롤링 코드를 이용했습니다.
+
 lambda_function.lambda_handler는 event parameter의 구성 방식은 다음과 같습니다.
 ```json
 {
-    "community":{community},
-    "car_name":{car_name},
-    "start_datetime":{yyyy-MM-dd hh:mm},
-    "end_datetime":{yyyy-MM-dd hh:mm}
+    "community":<community>,
+    "car_name":<car_name>,
+    "start_datetime":<yyyy-MM-dd hh:mm>,
+    "end_datetime":<yyyy-MM-dd hh:mm>
 }
 ```
 
 ## 다른 AWS Lambda를 트리거 하는 AWS Lambda
 `lambda-trigger` 디렉터리입니다.
-크롤링하는 AWS Lambda를 비동기적으로 실행 시킵니다.
+
+크롤링하는 AWS Lambda를 모든 자동차와 커뮤니티에 대해 비동기적으로 실행 시킵니다.
+
 필요한 event parameter는 없습니다.
 
 ## AWS Lambda에서 selenium 사용하기
@@ -45,6 +50,7 @@ docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:
 ## Test on Local
 ### 크롤링 AWS Lambda
 두 가지 방법 모두 `./lambda-crawler/` 디렉터리에서 실행합니다.
+
 `./lambda-crawler/event.json` 파일을 수정해서 다양한 상황에 대해 테스트할 수 있습니다.
 
 #### Using SAM
