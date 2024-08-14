@@ -18,8 +18,9 @@ import multiprocessing as mp
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from tempfile import mkdtemp
 import urllib.parse
 import itertools
 
@@ -43,10 +44,12 @@ class DC_Inside_Crawler:
         initial_search_url = base_url.format(self.board_id, encoded_query)
         cur_search_url = self._get_start_url(driver, initial_search_url)
 
-        total_df = pd.DataFrame()        
+        total_df = pd.DataFrame(
+            columns=['Title', 'Date', 'Time', 'Body', 'Comment', 'View', 'Like', 'Community', 'Url', 'NumComments', 'DcApp', 'Dislike']
+        )   
         while True: # start_datetime이 될 때까지 반복
             next_search_url = self._get_next_search_url(driver, cur_search_url)
-            batch_post_urls = self._get_batch_post_urls(driver, cur_search_url)
+            batch_post_urls, stop_flag = self._get_batch_post_urls(driver, cur_search_url)
             
             print(f"[INFO] 배치 크롤링 시작\n")
             batch_df = self._get_batch_post_contents_df(batch_post_urls, num_processes)
@@ -58,7 +61,7 @@ class DC_Inside_Crawler:
                 last_post_datetime = pd.to_datetime(batch_df.iloc[-1]['Date'] + ' ' + batch_df.iloc[-1]['Time'])
                 print(batch_df.iloc[-1])
 
-            if last_post_datetime is not None and last_post_datetime < self.start_datetime:
+            if stop_flag:
                 print("[INFO] 전체 크롤링 종료\n")
                 break
 
@@ -70,18 +73,38 @@ class DC_Inside_Crawler:
         return total_df
 
     def _get_driver(self):
-        op = webdriver.ChromeOptions()
-        op.add_argument('headless')
-        op.add_argument('--disable-gpu')
-        op.add_argument('--no-sandbox')
-        op.add_argument('--disable-dev-shm-usage')
+        chrome_options = ChromeOptions()
+        chrome_options.add_argument("--headless=new")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-dev-tools")
+        chrome_options.add_argument("--no-zygote")
+        chrome_options.add_argument("--single-process")
+        chrome_options.add_argument(f"--user-data-dir={mkdtemp()}")
+        chrome_options.add_argument(f"--data-path={mkdtemp()}")
+        chrome_options.add_argument(f"--disk-cache-dir={mkdtemp()}")
+        chrome_options.add_argument("--remote-debugging-pipe")
+        chrome_options.add_argument("--verbose")
+        chrome_options.add_argument("--log-path=/tmp")
+        chrome_options.binary_location = "/opt/chrome/chrome-linux64/chrome"
         prefs = {
             "profile.managed_default_content_settings.images": 2,  # 이미지 비활성화
             "profile.managed_default_content_settings.ads": 2,     # 광고 비활성화
             "profile.managed_default_content_settings.media": 2    # 비디오, 오디오 비활성화
         }
-        op.add_experimental_option("prefs", prefs)
-        driver = webdriver.Chrome(options=op)
+        chrome_options.add_experimental_option("prefs", prefs)
+
+        service = Service(
+            executable_path="/opt/chrome-driver/chromedriver-linux64/chromedriver",
+            service_log_path="/tmp/chromedriver.log"
+        )
+
+        driver = webdriver.Chrome(
+            # service=service, # 도커 환경에서 사용시 주석 해제하세요.
+            options=chrome_options
+        )
+
         return driver
     
     def _get_url_soup(self, driver, url):
@@ -113,31 +136,43 @@ class DC_Inside_Crawler:
         return None
         
     def _get_batch_post_urls(self, driver, search_url):
-        batch_post_urls = []
+        batch_post_urls_with_datetime = []
+        stop_flag = False
 
         for page in itertools.count(start=1, step=1):    
             paged_search_url = search_url + f"&page={page}"
-            post_urls = self._get_post_urls_from_post_list(driver, paged_search_url)
-
-            if not post_urls or (batch_post_urls and post_urls[-1] == batch_post_urls[-1]): # 검색 내용이 없거나 이전 크롤링 내용과 같으면 정지
+            post_urls_with_datetime = self._get_post_urls_with_datetime_from_post_list(driver, paged_search_url)
+            # 검색 내용이 없거나 이전 크롤링 내용과 같으면 정지
+            if not post_urls_with_datetime or (batch_post_urls_with_datetime and post_urls_with_datetime[-1][0] == batch_post_urls_with_datetime[-1][0]):
                 break
-            batch_post_urls.extend(post_urls)
+            batch_post_urls_with_datetime.extend(post_urls_with_datetime)
+            # start datetime보다 일찍 작성된 게시글을 불러왔으면 정지
+            if batch_post_urls_with_datetime and pd.to_datetime(batch_post_urls_with_datetime[-1][1]) < self.start_datetime:
+                stop_flag = True
+                break
+        
+        batch_post_urls = [
+            url
+            for url,datetime in batch_post_urls_with_datetime
+            if self.start_datetime <= pd.to_datetime(datetime) <= self.end_datetime
+        ]
 
-        return batch_post_urls
+        return batch_post_urls, stop_flag
     
-    ### 게시글 목록의 한 페이지에 나타난 게시글의 링크들을 크롤링
-    def _get_post_urls_from_post_list(self, driver, url):
+    ### 게시글 목록의 한 페이지에 나타난 게시글의 링크와 datetime들을 크롤링
+    def _get_post_urls_with_datetime_from_post_list(self, driver, url):
         post_urls = []
 
         for _ in range(MAX_PAGE_ACCESS):
             try:
+                prefix = "https://gall.dcinside.com"
                 soup = self._get_url_soup(driver, url)
-                titles = soup.select("tr.ub-content.us-post td.gall_tit.ub-word a")
-                base = "https://gall.dcinside.com"
+                title_elements = soup.select("tr.ub-content.us-post td.gall_tit.ub-word")
+                datetime_elements = soup.select("tr.ub-content.us-post td.gall_date")
                 post_urls = [
-                    base + title.get('href')
-                    for title in titles
-                    if 'reply_numbox' not in title.get('class', [])
+                    (prefix + title.find('a').get('href'), datetime.get('title'))
+                    for title,datetime in zip(title_elements, datetime_elements)
+                    if title.find('a')
                 ]
             except Exception as e:
                 print(f"[WARN] 게시글 목록 크롤링 재시도 - {e} - {url}\n")
@@ -151,25 +186,28 @@ class DC_Inside_Crawler:
         return post_urls
 
 
-
     ### batch url들을 멀티프로세싱을 통해 크롤링
     def _get_batch_post_contents_df(self, urls, num_processes):
         if not urls:
             return pd.DataFrame()
 
-        chunk_size = (len(urls) - 1) // num_processes + 1
-        chunks = [urls[i:i + chunk_size] for i in range(0, len(urls), chunk_size)]
+        post_contents = []
+        if num_processes == 1: # 멀티프로세싱 안 함
+            self.crawling_worker(urls, post_contents)  # worker가 url을 크롤링
+        else:
+            chunk_size = (len(urls) - 1) // num_processes + 1
+            chunks = [urls[i:i + chunk_size] for i in range(0, len(urls), chunk_size)]
 
-        with mp.Manager() as manager:
-            post_contents_output = manager.list()
-            processes = []  
-            for chunk in chunks:
-                p = mp.Process(target=self.worker, args=(chunk, post_contents_output))
-                processes.append(p)
-                p.start()
-            for p in processes:
-                p.join()
-            post_contents = list(post_contents_output)
+            with mp.Manager() as manager:
+                post_contents_output = manager.list()
+                processes = []  
+                for chunk in chunks:
+                    p = mp.Process(target=self.crawling_worker, args=(chunk, post_contents_output))
+                    processes.append(p)
+                    p.start()
+                for p in processes:
+                    p.join()
+                post_contents = list(post_contents_output)
 
         post_contents_df = pd.DataFrame(
             post_contents,
@@ -177,15 +215,11 @@ class DC_Inside_Crawler:
         )
         return post_contents_df
 
-
-    ### url들에 대해 크롤링하는 worker
-    def worker(self, urls, post_contents_output):
+    def crawling_worker(self, urls, post_contents):
         driver = self._get_driver()
-        post_contents = []
         for url in urls:
             post_content = self._get_single_post_content(driver, url)
-            if post_content:
-                post_contents_output.append(post_content)  # put 대신 append를 사용
+            post_contents.append(post_content)
         driver.quit()
     
     ### 하나의 게시글에서 내용 크롤링
