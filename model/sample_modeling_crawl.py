@@ -4,12 +4,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit, col
 
 
-""" Sample Modeling Script
-This script is a sample modeling script that calculates the emerge score of a car based on the issue.
-emerge score = View + Like * 20 + (Title_wc + Body_wc + Comment_wc) * 10
-"""
-
-
 JDBC_URL = "db_url"
 DB_NAME = "dbname"
 DB_USER = "dbusername"
