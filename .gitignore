@@ -12,3 +12,6 @@ chromedriver
 crawl.sh
 *.db
 venv
+emr_env.json
+*.jar
+*jar.sh
