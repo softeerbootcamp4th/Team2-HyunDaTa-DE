@@ -38,7 +38,7 @@ class DcInsideCrawler:
         cur_search_url = self._get_start_url(driver, initial_search_url)
 
         total_df = pd.DataFrame(
-            columns=['Title', 'Date', 'Time', 'Body', 'Comment', 'View', 'Like', 'Community', 'CarName', 'Url', 'NumComments', 'DcApp', 'Dislike']
+            columns=['Title', 'Date', 'Time', 'Body', 'Comment', 'View', 'Like', 'Community', 'CarName', 'Url']
         )
         while True: # start_datetime이 될 때까지 반복
             next_search_url = self._get_next_search_url(driver, cur_search_url)
@@ -168,7 +168,7 @@ class DcInsideCrawler:
 
         post_contents_df = pd.DataFrame(
             post_contents,
-            columns=['Title', 'Date', 'Time', 'Body', 'Comment', 'View', 'Like', 'Community', 'CarName', 'Url', 'NumComments', 'DcApp', 'Dislike']
+            columns=['Title', 'Date', 'Time', 'Body', 'Comment', 'View', 'Like', 'Community', 'CarName', 'Url']
         )
         return post_contents_df
 
@@ -244,13 +244,13 @@ class DcInsideCrawler:
             print(f"[ERROR] 게시글 크롤링 실패 - {url}\n")
         
         # 공통 + dcinside
-        return (title, date, time, body, comments, views, like, 'dcinside', self.query, url) + (num_comments, dc_app, dislike)
+        return (title, date, time, body, comments, views, like, 'dcinside', self.query, url) # + (num_comments, dc_app, dislike)
 
     def _transform(self, df):
         df['Date'] = pd.to_datetime(df['Date'], format='%Y.%m.%d').dt.strftime('%Y-%m-%d')
         df['Time'] = pd.to_datetime(df['Time'], format='%H:%M:%S').dt.strftime('%H:%M')
         df['View'] = pd.to_numeric(df['View'], errors='coerce').astype('Int64')
-        df['NumComments'] = pd.to_numeric(df['NumComments'], errors='coerce').astype('Int64')
         df['Like'] = pd.to_numeric(df['Like'], errors='coerce').astype('Int64')
-        df['Dislike'] = pd.to_numeric(df['Dislike'], errors='coerce').astype('Int64')
+        # df['NumComments'] = pd.to_numeric(df['NumComments'], errors='coerce').astype('Int64')
+        # df['Dislike'] = pd.to_numeric(df['Dislike'], errors='coerce').astype('Int64')
         return df
