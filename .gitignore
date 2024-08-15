@@ -13,3 +13,6 @@ crawl.sh
 *.db
 venv
 logs
+emr_env.json
+*.jar
+*jar.sh
