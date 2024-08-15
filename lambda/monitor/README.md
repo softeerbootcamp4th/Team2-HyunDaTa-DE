@@ -26,7 +26,7 @@ lambda_function.lambda_handler는 event parameter의 구성 방식은 다음과 
 필요한 event parameter는 없습니다.
 
 ## AWS Lambda에서 selenium 사용하기
-Python 3.12에서는 크롬 드라이버와 관련한 용량문제 때문에 도커 컨테이너 이미지를 이용해야 합니다.
+Python 3.12에서는 크롬 드라이버와 관련한 용량 문제 때문에 도커 컨테이너 이미지를 이용해야 합니다.
 1. `./lambda-crawler/Dockerfile`를 빌드합니다.
 ```bash
 export IMAGE_NAME=selenium-chrome-driver
@@ -70,6 +70,24 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d
 
 ### 트리거 AWS Lambda
 방법을 찾아보는 중입니다.
+
+## AWS CLI로 AWS Lambda의 도커 컨테이너 이미지 업데이트 하기
+```bash
+export IMAGE_NAME=selenium-chrome-driver
+export AWS_ACCOUNT_ID={your_aws_id}
+export AWS_REGION={your_region}
+export IMAGE_TAG=latest
+
+aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+docker build -t ${IMAGE_NAME} .
+docker tag ${IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+
+aws lambda update-function-code \
+    --function-name {aws_lambda_name} \
+    --image-uri ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+```
 
 ## References
 - https://youtu.be/8XBkm9DD6Ic?si=MT9x_og_yUC2IFrn
