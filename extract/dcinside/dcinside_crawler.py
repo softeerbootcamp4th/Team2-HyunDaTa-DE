@@ -45,7 +45,7 @@ class DC_Inside_Crawler:
         cur_search_url = self._get_start_url(driver, initial_search_url)
 
         total_df = pd.DataFrame(
-            columns=['Title', 'Date', 'Time', 'Body', 'Comment', 'View', 'Like', 'Community', 'Url', 'NumComments', 'DcApp', 'Dislike']
+            columns=['Date', 'Time', 'Title', 'Body', 'Comment', 'View', 'Like', 'Community', 'Url', 'NumComments', 'DcApp', 'Dislike']
         )   
         while True: # start_datetime이 될 때까지 반복
             next_search_url = self._get_next_search_url(driver, cur_search_url)
@@ -211,7 +211,7 @@ class DC_Inside_Crawler:
 
         post_contents_df = pd.DataFrame(
             post_contents,
-            columns=['Title', 'Date', 'Time', 'Body', 'Comment', 'View', 'Like', 'Community', 'Url', 'NumComments', 'DcApp', 'Dislike']
+            columns=['Date', 'Time', 'Title', 'Body', 'Comment', 'View', 'Like', 'Community', 'Url', 'NumComments', 'DcApp', 'Dislike']
         )
         return post_contents_df
 
@@ -287,7 +287,7 @@ class DC_Inside_Crawler:
             print(f"[ERROR] 게시글 크롤링 실패 - {url}\n")
         
         # 공통 + dcinside
-        return (title, date, time, body, comments, views, like, 'dcinside', url) + (num_comments, dc_app, dislike)
+        return (date, time, title, body, comments, views, like, 'dcinside', url) + (num_comments, dc_app, dislike)
 
 
 def extract(query, start_datetime, end_datetime):
