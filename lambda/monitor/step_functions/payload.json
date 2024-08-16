@@ -1,0 +1,10 @@
+{
+  "car_names": ["granduer", "avante", "palisade", "casper", "genesis", "ioniq"],
+  "communities": ["dcinside", "bobaedream"],
+  "time_range_inputs": [
+    {"start_hours_ago": 6, "duration_hours": 6},
+    {"start_hours_ago": 12, "duration_hours": 6},
+    {"start_hours_ago": 18, "duration_hours": 6},
+    {"start_hours_ago": 24, "duration_hours": 6}
+  ]
+}
