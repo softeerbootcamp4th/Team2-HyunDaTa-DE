@@ -98,6 +98,17 @@
           }
         }
       },
+      "ResultPath": null,
+      "Next": "UpdateRds"
+    },
+    "UpdateRds": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:ap-northeast-2:473551908409:function:update-rds",
+      "Parameters": {
+        "communities.$": "$.communities",
+        "car_names.$": "$.car_names",
+        "time_ranges.$": "$.time_ranges.time_ranges"
+      },
       "End": true
     }
   }
