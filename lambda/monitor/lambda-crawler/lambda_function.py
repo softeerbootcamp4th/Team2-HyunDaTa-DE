@@ -73,8 +73,8 @@ def lambda_handler(event, context):
             return {'statusCode': 400, 'body': json.dumps(f'Error: Unknown community "{community}". Selecct one of [bobaedream, dcinside, naver_cafe].')}
         
         ### S3 업로드 ###
-        object_name = f"monitor/community/{community}/{start_datetime.strftime('%Y%m%d')}/{start_datetime.strftime('%Y%m%d_%H%M')}_{end_datetime.strftime('%H%M')}_{community}_{query}.csv"
-        upload_result, msg = upload_df_to_s3(df, "hyundata2-testbucket", object_name)
+        object_key = f"monitor/community/{community}/{start_datetime.strftime('%Y%m%d')}/{start_datetime.strftime('%Y%m%d_%H%M')}_{end_datetime.strftime('%Y%m%d_%H%M')}_{community}_{query}.csv"
+        upload_result, msg = upload_df_to_s3(df, "hyundata2-testbucket", object_key)
         if not upload_result:
             return {'statusCode': 500, 'body': json.dumps(f"Error: Failed to load at S3\n{msg}")}
 
