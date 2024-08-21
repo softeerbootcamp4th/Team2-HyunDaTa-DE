@@ -69,7 +69,7 @@ class BobaedreamCrawler:
         comments = soup.find_all('dd', {'id': lambda x: x and x.startswith('small_cmt_')})
         comment_texts = [comment.get_text(strip=True) for comment in comments]
         comments_string = ' '.join(comment_texts)
-        formatted_date = news_datetime.strftime('%Y-%m-%d %H:%M') if news_datetime else ''
+        formatted_date = news_datetime.strftime('%Y-%m-%d') if news_datetime else ''
 
         return {
             'Date': formatted_date, 
