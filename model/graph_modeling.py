@@ -10,11 +10,11 @@ from pyspark.sql import SparkSession, Row, Window
 from pyspark.sql.types import StringType, ArrayType, DoubleType, StructType, StructField, DateType
 
 
-JDBC_URL = ""
-HOST = ""
-DB_USER = ""
-DB_PASSWORD = ""
-DB_NAME = ""
+JDBC_URL = "JDBC_URL"
+HOST = "HOST"
+DB_USER = "DB_USER"
+DB_PASSWORD = "DB_PASSWORD"
+DB_NAME = "DB_NAME"
 POST_DB_NAME = ""
 RECOMMNED_DB_NAME = ""
 
