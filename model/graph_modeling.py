@@ -10,13 +10,13 @@ from pyspark.sql import SparkSession, Row, Window
 from pyspark.sql.types import StringType, ArrayType, DoubleType, StructType, StructField, DateType
 
 
-JDBC_URL = "jdbc:mysql://hyundata2-rds.cz8k028q2kf9.ap-southeast-2.rds.amazonaws.com:3306/hyundata_db"
-HOST = "hyundata2-rds.cz8k028q2kf9.ap-southeast-2.rds.amazonaws.com"
-DB_USER = "hyundata2"
-DB_PASSWORD = "hyundata2!"
-DB_NAME = "hyundata_db"
-POST_DB_NAME = "post"
-RECOMMNED_DB_NAME = "recommend3"
+JDBC_URL = ""
+HOST = ""
+DB_USER = ""
+DB_PASSWORD = ""
+DB_NAME = ""
+POST_DB_NAME = ""
+RECOMMNED_DB_NAME = ""
 
 
 def save_recommend_table_to_rds(df_list):
