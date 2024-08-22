@@ -59,55 +59,37 @@ def connect_to_rds():
         return None
 
 # RDS의 PostContents 테이블을 업데이트하는 함수
-def update_rds_table(df: pd.DataFrame):
+def update_rds_table(df):
     connection = connect_to_rds()
     
+    insert_update_query = """
+        INSERT INTO post (upload_date, upload_time, title, body, comments, num_views, num_likes, community, car_name, issue, url)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) AS new
+        ON DUPLICATE KEY UPDATE
+            comments = new.comments,
+            num_views = new.num_views,
+            num_likes = new.num_likes;
+    """
+    
+    data_to_insert = [
+        (
+            row['Date'], 
+            row['Time'], 
+            row['Title'], 
+            row['Body'], 
+            row['Comment'], 
+            row['View'],
+            row['Like'],
+            row['Community'],
+            row['CarName'],
+            row['Issue'],
+            row['Url']
+        )
+        for _, row in df.iterrows()
+    ]
+    
     with connection.cursor() as cursor:
-        for index, row in df.iterrows():
-            url = row['Url']
-            # 테이블에서 해당 URL이 존재하는지 확인
-            select_query = "SELECT * FROM post WHERE url = %s"
-            cursor.execute(select_query, (url,))
-            existing_row = cursor.fetchone()
-            
-            if existing_row:
-                # 존재하면 해당 row 업데이트
-                print("업데이트:", url)
-                update_query = """
-                    UPDATE post
-                    SET comments = %s, 
-                        num_views = %s, 
-                        num_likes = %s,
-                        issue = %s
-                    WHERE url = %s
-                """
-                cursor.execute(update_query, ( 
-                    row['Comment'], 
-                    row['View'],
-                    row['Like'],
-                    row['Issue'],
-                    url
-                ))
-            else:
-                # 존재하지 않으면 row 추가
-                print("추가:", url)
-                insert_query = """
-                    INSERT INTO post (upload_date, upload_time, title, body, comments, num_views, num_likes, community, car_name, issue, url)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                cursor.execute(insert_query, (
-                    row['Date'], 
-                    row['Time'], 
-                    row['Title'], 
-                    row['Body'], 
-                    row['Comment'], 
-                    row['View'],
-                    row['Like'],
-                    row['Community'],
-                    row['CarName'],
-                    row['Issue'],
-                    url
-                ))
+        cursor.executemany(insert_update_query, data_to_insert)
     
     connection.commit()
     connection.close()
