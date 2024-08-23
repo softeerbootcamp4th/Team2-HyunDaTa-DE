@@ -24,7 +24,7 @@ class NaverCafeCralwer:
             "palisade": {
                 "search_url": "https://cafe.naver.com/naworl",
                 "exclude_word": "출석 출첵 가입 등업신청 퇴근",
-                "search_keyword": "리세이드",
+                "search_keyword": "팰리세이드",
             },
             "ioniq": {
                 "search_url": "https://cafe.naver.com/cafeclip",
