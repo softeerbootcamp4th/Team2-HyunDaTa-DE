@@ -3,9 +3,9 @@ from datetime import datetime
 import json
 import boto3
 
-from crawler.bobaedream_crawler import BobaedreamCrawler
-from crawler.dcinside_crawler import DcInsideCrawler
-from crawler.naver_cafe_crawler import NaverCafeCralwer
+from crawler.kbs_crawler import KbsNewsCrawler
+from crawler.mbc_crawler import MbcNewsCrawler
+from crawler.sbs_crawler import SbsNewsCrawler
 
 
 KOREAN_CAR_NAME = {
@@ -14,7 +14,7 @@ KOREAN_CAR_NAME = {
     'genesis':'제네시스',
     'granduer':'그랜저',
     'ioniq':'아이오닉',
-    'palisade':'리세이드', # 팰리세이드를 펠리세이드로 적는 사람이 많음
+    'palisade':'팰리세이드'
 }
 
 def upload_df_to_s3(df, bucket_name, object_name):
@@ -44,14 +44,14 @@ def get_query_in_korean(query):
 def lambda_handler(event, context):
     try:
         ### 파라미터 확인 ###
-        community = event.get('community')
+        news = event.get('news')
         query = event.get('car_name')
         start_datetime = datetime.strptime(event.get('start_datetime'), "%Y-%m-%d %H:%M")
         end_datetime = datetime.strptime(event.get('end_datetime'), "%Y-%m-%d %H:%M")
 
-        print(community, query, start_datetime, end_datetime)
+        print(news, query, start_datetime, end_datetime)
 
-        if not community: return {'statusCode': 400, 'body': json.dumps('Error: community is not specified.')}
+        if not news: return {'statusCode': 400, 'body': json.dumps('Error: news is not specified.')}
         if not query: return {'statusCode': 400, 'body': json.dumps('Error: Car name is not specified.')}
         if not start_datetime: return {'statusCode': 400, 'body': json.dumps('Error: Start datetime is not specified.')}
         if not end_datetime: return {'statusCode': 400, 'body': json.dumps('Error: End datetime is not specified.')}
@@ -59,22 +59,21 @@ def lambda_handler(event, context):
         query_kor = get_query_in_korean(query)
 
         ### 크롤링 ###
-        if community == 'bobaedream':
-            crawler = BobaedreamCrawler()
-            df = crawler.bobaedream_crawl(query_kor, start_datetime, end_datetime)
-        elif community == 'dcinside':
-            crawler = DcInsideCrawler(query_kor, start_datetime, end_datetime)
-            df = crawler.start_crawling(num_processes=1)
-        elif community == 'naver_cafe':            
-            crawler = NaverCafeCralwer()
-            crawler.set_current_crawl_option(query)
-            df = crawler.start_crawling(end_datetime)
+        if news == 'kbs':
+            crawler = KbsNewsCrawler(query_kor, start_datetime, end_datetime)
+        elif news == 'mbc':
+            crawler = MbcNewsCrawler(query_kor, start_datetime, end_datetime)
+        elif news == 'sbs':            
+            crawler = SbsNewsCrawler(query_kor, start_datetime, end_datetime)
         else:
-            return {'statusCode': 400, 'body': json.dumps(f'Error: Unknown community "{community}". Selecct one of [bobaedream, dcinside, naver_cafe].')}
+            return {'statusCode': 400, 'body': json.dumps(f'Error: Unknown news media "{news}". Selecct one of [bobaedream, dcinside, naver_cafe].')}
+        
+        df = crawler.crawl_news()
+        crawler.close()
         
         ### S3 업로드 ###
-        object_key = f"monitor/community/{community}/{start_datetime.strftime('%Y%m%d')}/{start_datetime.strftime('%Y%m%d_%H%M')}_{end_datetime.strftime('%Y%m%d_%H%M')}_{community}_{query}.csv"
-        upload_result, msg = upload_df_to_s3(df, "hyundata2-testbucket", object_key)
+        object_name = f"monitor/news/{news}/{start_datetime.strftime('%Y%m%d')}/{start_datetime.strftime('%Y%m%d_%H%M')}_{end_datetime.strftime('%Y%m%d_%H%M')}_{news}_{query}.csv"
+        upload_result, msg = upload_df_to_s3(df, "hyundata2-testbucket", object_name)
         if not upload_result:
             return {'statusCode': 500, 'body': json.dumps(f"Error: Failed to load at S3\n{msg}")}
 

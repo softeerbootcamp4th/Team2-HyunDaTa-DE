@@ -1,31 +1,39 @@
 # AWS Lambda로 selenium 크롤링 자동화하기
 AWS Lambda에서 selenium 크롤링을 위해 사용할 Docker 컨테이너 이미지를 위한 Dockerfile과 샘플 크롤링 스크립트입니다.
 
-## 크롤링하는 AWS Lambda
+## 1. 시간 범위를 구하는 AWS Lambda
+`lambda-time_ranges` 디렉터리입니다.
+
+`hours` 시간 전에서부터 현재(정각)까지의 시간을 `num_splits`로 분할한 시간 범위들을 계산합니다.
+
+이를 통해 모든 AWS Lambda가 동일한 시간 범위에 대해 크롤링을 수행함을 보장합니다.
+
+lambda_function.lambda_handler에 전달하는 event parameter의 예시 구성 방식은 다음과 같습니다.
+```json
+{
+    "hours": 48,
+    "num_splits": 8
+}
+```
+
+## 2. 크롤링하는 AWS Lambda
 `labmda-crawler` 디렉터리입니다.
 
 도커 컨테이너 이미지 위에서 크롤링을 수행합니다.
 
 `/extract` 디렉터리에서 사용한 크롤링 코드를 이용했습니다.
 
-lambda_function.lambda_handler는 event parameter의 구성 방식은 다음과 같습니다.
+lambda_function.lambda_handler에 전달하는 event parameter의 예시 구성 방식은 다음과 같습니다.
 ```json
 {
-    "community":<community>,
-    "car_name":<car_name>,
-    "start_datetime":<yyyy-MM-dd hh:mm>,
-    "end_datetime":<yyyy-MM-dd hh:mm>
+    "community":"bobaedream",
+    "car_name":"ioniq",
+    "start_datetime":"2024-08-17 01:00",
+    "end_datetime":"2024-08-17 06:59"
 }
 ```
 
-## 다른 AWS Lambda를 트리거 하는 AWS Lambda
-`lambda-trigger` 디렉터리입니다.
-
-크롤링하는 AWS Lambda를 모든 자동차와 커뮤니티에 대해 비동기적으로 실행 시킵니다.
-
-필요한 event parameter는 없습니다.
-
-## AWS Lambda에서 selenium 사용하기
+### 2.1. AWS Lambda에서 selenium 사용하기
 Python 3.12에서는 크롬 드라이버와 관련한 용량 문제 때문에 도커 컨테이너 이미지를 이용해야 합니다.
 1. `./lambda-crawler/Dockerfile`를 빌드합니다.
 ```bash
@@ -47,8 +55,7 @@ docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:
 4. 이후 절차는 일반 Lambda와 유사합니다.
 
 
-## Test on Local
-### 크롤링 AWS Lambda
+### 2.2. 로컬에서 크롤링 하는 AWS Lambda 테스트 하기
 두 가지 방법 모두 `./lambda-crawler/` 디렉터리에서 실행합니다.
 
 `./lambda-crawler/event.json` 파일을 수정해서 다양한 상황에 대해 테스트할 수 있습니다.
@@ -68,10 +75,7 @@ docker run -p 9000:8080 selenium-chrome-driver
 curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d @event.json
 ```
 
-### 트리거 AWS Lambda
-방법을 찾아보는 중입니다.
-
-## AWS CLI로 AWS Lambda의 도커 컨테이너 이미지 업데이트 하기
+### 2.3. AWS CLI로 AWS Lambda의 도커 컨테이너 이미지 업데이트 하기
 ```bash
 export IMAGE_NAME=selenium-chrome-driver
 export AWS_ACCOUNT_ID={your_aws_id}
@@ -87,6 +91,26 @@ docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:
 aws lambda update-function-code \
     --function-name {aws_lambda_name} \
     --image-uri ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+```
+
+## 3. 크롤링 결과를 병합하는 AWS Lambda
+`labmda-merge_results` 디렉터리입니다.
+
+시간을 분할하여 크롤링한 결과들을 하나의 파일로 병합합니다.
+
+분할되어 저장됐던 파일은 동일 디렉터리에서 bin 디렉터리로 이동시킵니다.
+
+lambda_function.lambda_handler에 전달하는 event parameter의 예시 구성 방식은 다음과 같습니다.
+```json
+{
+    "community":"bobaedream",
+    "car_name":"ioniq",
+    "time_ranges":[
+        {"start_datetime":"2024-08-17 00:00", "end_datetime":"2024-08-17 05:59"},
+        {"start_datetime":"2024-08-17 06:00", "end_datetime":"2024-08-17 11:59"},
+        {"start_datetime":"2024-08-17 12:00", "end_datetime":"2024-08-17 17:59"}
+    ]
+}
 ```
 
 ## References
