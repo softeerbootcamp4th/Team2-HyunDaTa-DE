@@ -1,0 +1,6 @@
+{
+  "car_names": ["granduer", "avante", "palisade", "casper", "genesis", "ioniq"],
+  "newses": ["kbs", "mbc", "sbs"],
+  "hours": 720,
+  "num_splits": 1
+}
