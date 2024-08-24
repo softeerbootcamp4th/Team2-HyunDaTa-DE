@@ -61,7 +61,9 @@
                         "End": true,
                         "Catch": [
                           {
-                            "ErrorEquals": ["States.ALL"],
+                            "ErrorEquals": [
+                              "States.ALL"
+                            ],
                             "ResultPath": "$.error",
                             "Next": "LogError"
                           }
@@ -107,6 +109,15 @@
       "Parameters": {
         "communities.$": "$.communities",
         "car_names.$": "$.car_names",
+        "time_ranges.$": "$.time_ranges.time_ranges"
+      },
+      "ResultPath": null,
+      "Next": "RunEmrCluster"
+    },
+    "RunEmrCluster": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:ap-northeast-2:473551908409:function:emr_cluster",
+      "Parameters": {
         "time_ranges.$": "$.time_ranges.time_ranges"
       },
       "End": true
