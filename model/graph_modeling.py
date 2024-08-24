@@ -7,29 +7,28 @@ import pymysql
 from pyspark import StorageLevel
 import pyspark.sql.functions as F
 from pyspark.sql import SparkSession, Row, Window
-from pyspark.sql.types import StringType, ArrayType, DoubleType, StructType, StructField, DateType
+from pyspark.sql.types import StringType, ArrayType, DoubleType, StructType, StructField, DateType, FloatType
 
 
-JDBC_URL = "JDBC_URL"
-HOST = "HOST"
-DB_USER = "DB_USER"
-DB_PASSWORD = "DB_PASSWORD"
-DB_NAME = "DB_NAME"
+JDBC_URL = ""
+HOST = ""
+DB_USER = ""
+DB_PASSWORD = ""
+DB_NAME = ""
 POST_DB_NAME = ""
-RECOMMNED_DB_NAME = ""
+RECOMMEND_DB_NAME = ""
 
 
-def save_recommend_table_to_rds(df_list):
-    df_list.write.jdbc(
-        url=JDBC_URL,
-        table=RECOMMNED_DB_NAME,
-        mode="overwrite",
-        properties={
-            "user": DB_USER,
-            "password": DB_PASSWORD,
-            "driver": "com.mysql.cj.jdbc.Driver"
-        }
-    )
+def save_recommend_table_to_rds(df):
+    df.write \
+        .format("jdbc") \
+        .option("url", JDBC_URL) \
+        .option("dbtable", RECOMMEND_DB_NAME) \
+        .option("user", DB_USER) \
+        .option("password", DB_PASSWORD) \
+        .option("driver", "com.mysql.cj.jdbc.Driver") \
+        .mode("overwrite") \
+        .save()
 
 
 def save_trigger_table_to_rds(df_list):
@@ -40,37 +39,30 @@ def save_trigger_table_to_rds(df_list):
         database=DB_NAME,
         cursorclass=pymysql.cursors.DictCursor
     )
-
     try:
         with connection.cursor() as cursor:
-            # SQL 쿼리 작성 (INSERT IGNORE 사용)
             sql = """
-            INSERT IGNORE INTO issue_trigger (car_name, issue, upload_date, is_trigger)
-            VALUES (%s, %s, %s, %s)
+            INSERT IGNORE INTO issue_trigger (car_name, issue, upload_date, is_trigger, url)
+            VALUES (%s, %s, %s, %s, %s)
             """
-
-            # 데이터 삽입
             cursor.executemany(sql, df_list)
 
-        # 트랜잭션 커밋
         connection.commit()
-        print("SUCCESS SAVE RECOMMEND TABLE TO RDS")
+
     except Exception as e:
         print(f"An error occurred: {e}")
-        connection.rollback()  # 예외 발생 시 롤백
+        connection.rollback()
 
     finally:
-        connection.close()  # 연결 닫기
+        connection.close()
 
 
-def filter_by_date(row, cur_time):
-    # lambda 대신에 독립적인 함수를 정의하여 사용
-    end_date = datetime.strptime(cur_time, '%Y-%m-%d').date()
+def filter_by_date(row, cur_time: str):
+    end_date = datetime.strptime(cur_time, '%Y-%m-%d %H:%M').date()
     start_date = end_date - timedelta(days=90)
     return start_date <= row["upload_date"] <= end_date
 
 
-# 순차적으로 이동 평균을 계산하는 함수
 def calculate_graph_score(partition, alpha=0.05, beta=0.02):
     view_moving_avg, like_moving_avg = None, None
     result = []
@@ -150,7 +142,7 @@ def compute_dtw(a_list, b_list, trigger_date):
     b_scores = [x['norm_graph_score'] for x in filtered_b_list]
 
     if not a_scores or not b_scores:
-        return float('inf')  # 데이터가 없을 경우 무한대로 설정하여 제외
+        return float('inf')
     return float(dtw.distance(a_scores, b_scores))
 
 
@@ -162,7 +154,7 @@ def adjust_dates(recommend_json, current_time):
             if isinstance(recommend_dict['recommend_start_date'], str) \
             else recommend_dict['recommend_start_date']
 
-        current_time = datetime.strptime(current_time, '%Y-%m-%d').date() \
+        current_time = datetime.strptime(current_time, '%Y-%m-%d %H:%M').date() \
             if isinstance(current_time, str) \
             else current_time
 
@@ -180,6 +172,10 @@ def adjust_dates(recommend_json, current_time):
         recommend_dict['recommend_graph_score_list'] = adjusted_graph_scores
         adjusted_recommendations.append(recommend_dict)
     return adjusted_recommendations
+
+
+def interpolation(target, x):
+    return target * (1.2**(-x)*3+1)
 
 
 graph_score_schema = ArrayType(StructType([
@@ -216,12 +212,56 @@ def preprocess_rds_data(emr_run_date):
         .load()
 
     # extract issue_list
+    time_only = F.date_format(F.col('upload_time'), 'HH:mm:ss')
     df = df.drop(
         F.col('title'), F.col('body'), F.col('comments')
     ).filter(
-        F.get_json_object(
-            df.issue, '$[0]'
-        ).isNotNull()
+        F.get_json_object(df.issue, '$[0]').isNotNull()
+    ).withColumn(
+        'merged_time',
+        F.to_timestamp(F.concat(F.col('upload_date'), F.lit(' '), time_only))
+    )
+
+    # interpolation latest 48 hours data
+    cur_date = datetime.strptime(emr_run_date, "%Y-%m-%d %H:%M")
+    two_days_ago = cur_date - timedelta(hours=48)
+    df_recent = df.filter(F.col('upload_date') >= two_days_ago)
+
+    time_difference_in_seconds = F.unix_timestamp(
+        F.lit(cur_date)) - F.unix_timestamp(F.col("merged_time"))
+    time_difference_in_hours = time_difference_in_seconds / 3600
+    df_recent = df_recent.withColumn('time_diff', time_difference_in_hours)
+
+    interpolation_udf = F.udf(interpolation, FloatType())
+    df_recent = df_recent.withColumn(
+        'num_views',
+        interpolation_udf(
+            F.col('num_views'),
+            F.col('time_diff')
+        )
+    ).withColumn(
+        'num_likes',
+        interpolation_udf(
+            F.col('num_likes'),
+            F.col('time_diff')
+        )
+    ).drop(
+        'merged_time',
+        'time_diff'
+    )
+
+    # join with interpolated recent data
+    df = df.alias('a').join(
+        df_recent.alias('b'),
+        on='url',
+        how='left'
+    ).select(
+        *[
+            F.col('a.' + col_name)
+            if col_name not in ['num_views', 'num_likes']
+            else F.coalesce(F.col('b.' + col_name), F.col('a.' + col_name)).alias(col_name)
+            for col_name in df.columns
+        ]
     ).withColumn(
         'issue_list',
         F.from_json(
@@ -292,9 +332,9 @@ def preprocess_rds_data(emr_run_date):
         car_name=row[0],
         indiv_issue=row[1],
         upload_date=row[2],
-        norm_graph_score=row[5] * row[6]  # 곱셈 연산
+        norm_graph_score=row[5] * row[6]  # view * like
     ))
-    result_rdd.take(1)
+    result_rdd.persist(StorageLevel.MEMORY_AND_DISK)
 
     # find recent 90 days data
     result_3month_rdd = result_rdd.filter(
@@ -310,16 +350,32 @@ def preprocess_rds_data(emr_run_date):
         is_trigger=True
     ))
     trigger_3month_df = spark.createDataFrame(trigger_3month_rdd)
-    save_trigger_table_to_rds(trigger_3month_df)
+
+    # match trigger points with urls
+    trigger_url_df = defect_df.alias('a').join(
+        trigger_3month_df.alias('b'),
+        (F.col('a.car_name') == F.col('b.car_name')) &
+        (F.col('a.indiv_issue') == F.col('b.issue')) &
+        (F.col('a.upload_date') == F.col('b.upload_date')),
+        'inner'
+    ).select(
+        'b.car_name', 'b.issue', 'b.upload_date', 'b.is_trigger', 'a.url'
+    )
+
+    trigger_url_df = trigger_url_df.groupBy(
+        "car_name", "issue", "upload_date", "is_trigger"
+    ).agg(
+        F.collect_list(F.col('url')).alias('url')
+    ).withColumn(
+        'url', F.to_json(F.col('url'))
+    )
+    save_trigger_table_to_rds(trigger_url_df)
 
     # find all trigger points
     all_trigger_df_rdd = result_rdd.mapPartitionsWithIndex(find_trigger_points)
     all_trigger_df = spark.createDataFrame(all_trigger_df_rdd)
-    all_trigger_df.show(1)
 
     result_df = spark.createDataFrame(result_rdd)
-    result_df.show(1)
-
     all_data = all_trigger_df.alias("t").join(
         result_df.alias("d"),
         (F.col("t.car_name") == F.col("d.car_name")) &
@@ -347,8 +403,7 @@ def preprocess_rds_data(emr_run_date):
             )
         ).alias("data_list")
     )
-    all_data.write.parquet("/tmp_data", mode="overwrite")
-    all_data = spark.read.parquet("/tmp_data")
+    all_data.persist(StorageLevel.MEMORY_AND_DISK)
 
     # get 3month data
     three_month_df = spark.createDataFrame(result_3month_rdd)
@@ -357,6 +412,7 @@ def preprocess_rds_data(emr_run_date):
             "3month_data")
     )
 
+    all_data = all_data.repartition(50)
     joined_df = all_data.alias("all").join(
         F.broadcast(three_month_data_df).alias("three"),
         (F.col("three.car_name") != F.col("all.t_car_name")) &
@@ -366,8 +422,6 @@ def preprocess_rds_data(emr_run_date):
         "car_name", "indiv_issue", "3month_data",
         "t_car_name", "t_issue", "trigger_date", "data_list"
     )
-    joined_df = joined_df.repartition(10)
-    joined_df.persist(StorageLevel.MEMORY_AND_DISK)
 
     compute_dtw_udf = F.udf(compute_dtw, DoubleType())
     distance_df = joined_df.withColumn(
@@ -375,8 +429,7 @@ def preprocess_rds_data(emr_run_date):
         compute_dtw_udf(F.col("3month_data"), F.col(
             "data_list"), F.col("trigger_date"))
     )
-    distance_df.write.parquet("/tmp_data3", mode="overwrite")
-    distance_df = spark.read.parquet("/tmp_data3")
+    distance_df = distance_df.repartition(100)
 
     # define window spec for find min dtw distance (ranking 3)
     window_spec = Window.partitionBy(
@@ -386,9 +439,10 @@ def preprocess_rds_data(emr_run_date):
     top3_recommendations = distance_df.withColumn(
         "rank", F.row_number().over(window_spec)
     ).filter(F.col("rank") <= 3)
+    top3_recommendations.persist(StorageLevel.MEMORY_AND_DISK)
 
     # save top3_recommendations to rds
-    recommendations_df = top3_recommendations.groupBy("car_name", "indiv_issue", "3month_data", "trigger_date") \
+    recommendations_df = top3_recommendations.groupBy("car_name", "indiv_issue", "3month_data") \
         .agg(
         F.collect_list(
             F.struct(
@@ -405,7 +459,6 @@ def preprocess_rds_data(emr_run_date):
     ).withColumnRenamed(
         "3month_data", "monitor_graph_score_list"
     )
-    recommendations_df.show(1)
 
     adjust_dates_udf = F.udf(adjust_dates, recommend_schema)
     recommendations_df = recommendations_df.withColumn(

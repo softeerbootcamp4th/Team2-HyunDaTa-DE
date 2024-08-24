@@ -2,10 +2,6 @@ import json
 import boto3
 from datetime import datetime, timezone, timedelta
 
-# time
-KST = timezone(timedelta(hours=9))
-time_record = datetime.now(KST).strftime('%Y%m%d%H%M%S')
-_today = time_record[:8]
 
 with open("emr_env.json", "r") as f:
     emr_env = json.load(f)
@@ -19,9 +15,9 @@ client = boto3.client(
 )
 
 
-def create_emr_cluster():
+def create_emr_cluster(end_datetime):
     response = client.run_job_flow(
-        Name=f"emr_cluster_{_today}",
+        Name=f"emr_cluster_{end_datetime}",
         Instances={
             "InstanceGroups": [
                 {
@@ -143,11 +139,12 @@ def add_step_to_cluster(cluster_id, emr_run_date):
 
 
 def lambda_handler(event, context):
-    # time_ranges = event.get('time_ranges')
-    # end_datetime = max(tr['end_datetime'] for tr in time_ranges).split(' ')[0]
+    time_ranges = event.get('time_ranges')
+    end_datetime = max([tr['end_datetime']
+                       for tr in time_ranges])
 
-    cluster_id = create_emr_cluster()
-    add_step_to_cluster(cluster_id, f"{_today[:4]}-{_today[4:6]}-{_today[6:]}")
+    cluster_id = create_emr_cluster(end_datetime)
+    add_step_to_cluster(cluster_id, end_datetime)
 
     return {
         "statusCode": 200,
