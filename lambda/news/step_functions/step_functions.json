@@ -1,0 +1,107 @@
+{
+  "Comment": "자동차 뉴스 모니터링 람다 실행 및 RDS 업데이트",
+  "StartAt": "CalculateTimeRanges",
+  "States": {
+    "CalculateTimeRanges": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:ap-northeast-2:473551908409:function:get-crawling-time-ranges",
+      "Parameters": {
+        "hours.$": "$.hours",
+        "num_splits.$": "$.num_splits"
+      },
+      "ResultPath": "$.time_ranges",
+      "Next": "NewsLoop"
+    },
+    
+    "NewsLoop": {
+      "Type": "Map",
+      "MaxConcurrency": 0,
+      "ItemsPath": "$.newses",
+      "Parameters": {
+        "news.$": "$$.Map.Item.Value",
+        "car_names.$": "$.car_names",
+        "time_ranges.$": "$.time_ranges.time_ranges"
+      },
+      "Iterator": {
+        "StartAt": "CarNameLoop",
+        "States": {
+          "CarNameLoop": {
+            "Type": "Map",
+            "MaxConcurrency": 0,
+            "ItemsPath": "$.car_names",
+            "Parameters": {
+              "news.$": "$.news",
+              "car_name.$": "$$.Map.Item.Value",
+              "time_ranges.$": "$.time_ranges"
+            },
+            "Iterator": {
+              "StartAt": "TimeRangeLoop",
+              "States": {
+                "TimeRangeLoop": {
+                  "Type": "Map",
+                  "MaxConcurrency": 0,
+                  "ItemsPath": "$.time_ranges",
+                  "Parameters": {
+                    "start_datetime.$": "$$.Map.Item.Value.start_datetime",
+                    "end_datetime.$": "$$.Map.Item.Value.end_datetime",
+                    "news.$": "$.news",
+                    "car_name.$": "$.car_name"
+                  },
+                  "Iterator": {
+                    "StartAt": "MonitoringNews",
+                    "States": {
+                      "MonitoringNews": {
+                        "Type": "Task",
+                        "Resource": "arn:aws:lambda:ap-northeast-2:473551908409:function:monitor-news",
+                        "Parameters": {
+                          "start_datetime.$": "$.start_datetime",
+                          "end_datetime.$": "$.end_datetime",
+                          "news.$": "$.news",
+                          "car_name.$": "$.car_name"
+                        },
+                        "End": true,
+                        "Catch": [
+                          {
+                            "ErrorEquals": ["States.ALL"],
+                            "ResultPath": "$.error",
+                            "Next": "LogError"
+                          }
+                        ]
+                      },
+
+                      "LogError": {
+                        "Type": "Task",
+                        "Resource": "arn:aws:lambda:ap-northeast-2:473551908409:function:log-crawling-error",
+                        "Parameters": {
+                          "error.$": "$.error",
+                          "news.$": "$.news",
+                          "car_name.$": "$.car_name"
+                        },
+                        "End": true
+                      }
+                    }
+                  },
+                  "End": true
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "ResultPath": null,
+      "Next": "UpdateRds"
+    },
+
+    "UpdateRds": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:ap-northeast-2:473551908409:function:update-news-to-rds",
+      "Parameters": {
+        "newses.$": "$.newses",
+        "car_names.$": "$.car_names",
+        "time_ranges.$": "$.time_ranges.time_ranges"
+      },
+      "End": true
+    }
+  }
+}
