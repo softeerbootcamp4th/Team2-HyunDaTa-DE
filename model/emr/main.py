@@ -42,8 +42,13 @@ def save_trigger_table_to_rds(df_list):
     try:
         with connection.cursor() as cursor:
             sql = """
-            INSERT IGNORE INTO issue_trigger (car_name, issue, upload_date, is_trigger, url)
+            INSERT INTO issue_trigger (car_name, issue, upload_date, is_trigger, url)
             VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                issue = VALUES(issue),
+                upload_date = VALUES(upload_date),
+                is_trigger = VALUES(is_trigger),
+                url = VALUES(url)
             """
             cursor.executemany(sql, df_list)
 

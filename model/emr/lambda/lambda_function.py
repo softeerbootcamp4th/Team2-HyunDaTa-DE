@@ -126,7 +126,7 @@ def add_step_to_cluster(cluster_id, emr_run_date):
                     "Jar": "command-runner.jar",
                     "Args": [
                         "spark-submit",
-                        f"s3://{emr_env['S3_BUCKET_NAME']}/{emr_env['OUTPUT_PATH']}/graph_modeling.py",
+                        f"s3://{emr_env['S3_BUCKET_NAME']}/{emr_env['OUTPUT_PATH']}/main.py",
                         "--emr_run_date", emr_run_date
                     ]
                 }
