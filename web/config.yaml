@@ -1,0 +1,69 @@
+defectTypes:
+  - ICCU
+  - 가속
+  - 급발진
+  - 냉각수누수
+  - 녹/부식
+  - 누수
+  - 누유
+  - 단차
+  - 도어잠금
+  - 떨림
+  - 방전
+  - 배기
+  - 배터리
+  - 변속기
+  - 브레이크패드
+  - 서스펜션
+  - 소프트웨어
+  - 스티어링
+  - 시동
+  - 안전벨트
+  - 에어백
+  - 에어컨
+  - 엔진
+  - 엔진소음
+  - 연료누출
+  - 와이퍼
+  - 전기
+  - 전방 센서
+  - 제동
+  - 조명
+  - 차선이탈경고시스템
+  - 코팅
+  - 타이어
+  - 트렁크
+  - 핸들
+  - 후방카메라
+  - 히터
+
+car_name:
+  - 아반떼
+  - 그랜저
+  - 제네시스
+  - 아이오닉
+  - 캐스퍼
+  - 팰리세이드
+
+vehicles:
+  아반떼:
+    name: "아반떼"
+    image: "images/avante_1.jpg"
+  소나타:
+    name: "소나타"
+    image: "images/sonata_1.jpg"
+  그랜저:
+    name: "그랜저"
+    image: "images/grandeur_1.webp"
+  제네시스:
+    name: "제네시스"
+    image: "images/genesis_1.jpg"
+  아이오닉:
+    name: "아이오닉"
+    image: "images/ioniq_1.jpg"
+  캐스퍼:
+    name: "캐스퍼"
+    image: "images/casper_1.webp"
+  팰리세이드:
+    name: "팰리세이드"
+    image: "images/palisade_1.webp"
