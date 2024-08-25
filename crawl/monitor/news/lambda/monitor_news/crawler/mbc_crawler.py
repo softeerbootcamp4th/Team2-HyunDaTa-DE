@@ -3,10 +3,7 @@ import time
 from datetime import datetime
 import pandas as pd
 from bs4 import BeautifulSoup
-from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service as ChromeService
 
 from crawler.driver import get_driver
 

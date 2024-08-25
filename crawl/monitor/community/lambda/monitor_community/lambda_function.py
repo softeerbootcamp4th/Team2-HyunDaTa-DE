@@ -70,17 +70,17 @@ def lambda_handler(event, context):
             crawler.set_current_crawl_option(query)
             df = crawler.start_crawling(end_datetime)
         else:
-            return {'statusCode': 400, 'body': json.dumps(f'Error: Unknown community "{community}". Selecct one of [bobaedream, dcinside, naver_cafe].')}
+            return {'statusCode': 400, 'body': json.dumps(f'[ERROR] Unknown community "{community}". Selecct one of [bobaedream, dcinside, naver_cafe].')}
         
         ### S3 업로드 ###
         object_key = f"monitor/community/{community}/{start_datetime.strftime('%Y%m%d')}/{start_datetime.strftime('%Y%m%d_%H%M')}_{end_datetime.strftime('%Y%m%d_%H%M')}_{community}_{query}.csv"
         upload_result, msg = upload_df_to_s3(df, "hyundata2-testbucket", object_key)
-        if not upload_result:
-            return {'statusCode': 500, 'body': json.dumps(f"Error: Failed to load at S3\n{msg}")}
+        if upload_result == False:
+            return {'statusCode': 500, 'body': json.dumps(f"[ERROR] Failed to load at S3\n{msg}")}
 
         return {'statusCode': 200, 'body': json.dumps(msg)}
 
     except ValueError as ve:
-        return {'statusCode': 400, 'body': json.dumps(str(ve))}
+        return {'statusCode': 400, 'body': json.dumps(f"[ERROR] {str(ve)}")}
     except Exception as e:
-        return {'statusCode': 500, 'body': json.dumps(f"Error: Unknown error occured. {str(e)}")}
+        return {'statusCode': 500, 'body': json.dumps(f"[ERROR] Unknown error occured. {str(e)}")}

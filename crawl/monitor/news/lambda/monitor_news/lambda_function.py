@@ -39,7 +39,7 @@ def get_query_in_korean(query):
     try:
         return KOREAN_CAR_NAME[query]
     except KeyError:
-        raise ValueError(f'Unknown car name "{query}".')
+        raise ValueError(f'[ERROR] Unknown car name "{query}".')
 
 def lambda_handler(event, context):
     try:
@@ -51,10 +51,10 @@ def lambda_handler(event, context):
 
         print(news, query, start_datetime, end_datetime)
 
-        if not news: return {'statusCode': 400, 'body': json.dumps('Error: news is not specified.')}
-        if not query: return {'statusCode': 400, 'body': json.dumps('Error: Car name is not specified.')}
-        if not start_datetime: return {'statusCode': 400, 'body': json.dumps('Error: Start datetime is not specified.')}
-        if not end_datetime: return {'statusCode': 400, 'body': json.dumps('Error: End datetime is not specified.')}
+        if not news: return {'statusCode': 400, 'body': json.dumps('[ERROR] `news` is not specified.')}
+        if not query: return {'statusCode': 400, 'body': json.dumps('[ERROR]`car_name` is not specified.')}
+        if not start_datetime: return {'statusCode': 400, 'body': json.dumps('[ERROR] `start_datetime` is not specified.')}
+        if not end_datetime: return {'statusCode': 400, 'body': json.dumps('[ERROR] `end_datetime` is not specified.')}
         
         query_kor = get_query_in_korean(query)
 
@@ -66,7 +66,7 @@ def lambda_handler(event, context):
         elif news == 'sbs':            
             crawler = SbsNewsCrawler(query_kor, start_datetime, end_datetime)
         else:
-            return {'statusCode': 400, 'body': json.dumps(f'Error: Unknown news media "{news}". Selecct one of [bobaedream, dcinside, naver_cafe].')}
+            return {'statusCode': 400, 'body': json.dumps(f'[ERROR] Unknown news media "{news}". Selecct one of [bobaedream, dcinside, naver_cafe].')}
         
         df = crawler.crawl_news()
         crawler.close()
@@ -75,11 +75,11 @@ def lambda_handler(event, context):
         object_name = f"monitor/news/{news}/{start_datetime.strftime('%Y%m%d')}/{start_datetime.strftime('%Y%m%d_%H%M')}_{end_datetime.strftime('%Y%m%d_%H%M')}_{news}_{query}.csv"
         upload_result, msg = upload_df_to_s3(df, "hyundata2-testbucket", object_name)
         if not upload_result:
-            return {'statusCode': 500, 'body': json.dumps(f"Error: Failed to load at S3\n{msg}")}
+            return {'statusCode': 500, 'body': json.dumps(f"[ERROR] Failed to load at S3\n{msg}")}
 
         return {'statusCode': 200, 'body': json.dumps(msg)}
 
     except ValueError as ve:
-        return {'statusCode': 400, 'body': json.dumps(str(ve))}
+        return {'statusCode': 400, 'body': json.dumps(f"[ERROR] {str(ve)}")}
     except Exception as e:
-        return {'statusCode': 500, 'body': json.dumps(f"Error: Unknown error occured. {str(e)}")}
+        return {'statusCode': 500, 'body': json.dumps(f"[ERROR] Unknown error occured. {str(e)}")}
