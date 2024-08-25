@@ -1,6 +1,6 @@
 {
   "car_names": ["granduer", "avante", "palisade", "casper", "genesis", "ioniq"],
-  "communities": ["dcinside", "bobaedream"],
+  "communities": ["bobaedream", "dcinside", "naver_cafe"],
   "hours": 48,
   "num_splits": 8
 }

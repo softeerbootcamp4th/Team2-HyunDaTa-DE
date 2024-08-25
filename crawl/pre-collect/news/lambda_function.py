@@ -1,3 +1,4 @@
+import sys
 import io
 from datetime import datetime
 import json
@@ -83,3 +84,19 @@ def lambda_handler(event, context):
         return {'statusCode': 400, 'body': json.dumps(str(ve))}
     except Exception as e:
         return {'statusCode': 500, 'body': json.dumps(f"Error: Unknown error occured. {str(e)}")}
+
+
+if __name__== "__main__":
+    news = sys.argv[1]
+    car_name = sys.argv[2]
+    start_datetime = sys.argv[3]
+    end_datetime = sys.argv[4]
+    
+    event = dict(
+        news=news,
+        car_name=car_name,
+        start_datetime=start_datetime,
+        end_datetime=end_datetime
+    )
+
+    print(lambda_handler(event, None))

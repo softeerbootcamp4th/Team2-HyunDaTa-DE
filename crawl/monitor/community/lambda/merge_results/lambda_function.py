@@ -61,7 +61,7 @@ def load_df_to_s3(df, bucket_name, object_key):
     except Exception as e:
         return False, str(e)
     
-def move_file_to_bin(bucket_name, object_keys):
+def move_file_to_archive(bucket_name, object_keys):
     for object_key in object_keys:
         try:
             copy_source = {'Bucket': bucket_name, 'Key': object_key}
@@ -109,7 +109,7 @@ def lambda_handler(event, context):
         else:
             print(f"[ERROR] The file is missing or inaccessible. - {bucket_name}:{object_key}")
 
-    # 병합된 데이터프레임을 정렬
+    # 병합된 데이터프레임을 날짜와 시간 기준으로 정렬
     if not merged_df.empty:
         merged_df = merged_df.sort_values(by=['Date', 'Time'])
 
@@ -117,14 +117,17 @@ def lambda_handler(event, context):
         community, car_name,
         merged_start_datetime, merged_end_datetime
     )
+
+    # 병합된 데이터프레임을 S3 버킷에 업로드
     success, msg = load_df_to_s3(merged_df, bucket_name, merged_object_key)
     if success:
         print(f"[INFO] Merged file successfully loaded at {bucket_name}:{merged_object_key}")
-        move_file_to_bin(bucket_name, accessible_object_keys)
+        # 업로드 성공 시, 접근 가능한 오브젝트들을 아카이브로 이동
+        move_file_to_archive(bucket_name, accessible_object_keys)
     else:
         print(f"[ERROR] Failed to load merged file: {msg}")
 
     return {
         "statusCode": 200,
-        "message": "Files processed, errors may have occurred.",
+        "message": "Files processed successfully. However, errors may have occurred during processing."
     }

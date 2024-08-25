@@ -343,7 +343,7 @@ if __name__ == '__main__':
                         default="./chromedriver", help="Chrome driver path")
     parser.add_argument("--login_info", type=str, default="login_info.env",
                         help="네이버 로그인 (ID, PW) 정보가 담긴 env 파일 경로")
-    parser.add_argument("--cafe_url", type=str, default="https://cafe.naver.com/naworl",
+    parser.add_argument("--cafe_url", type=str, default="",
                         help="Cafe URL")
     parser.add_argument("--start_date", type=str, default="2023-08-05",
                         help="탐색 시작 날짜")
@@ -351,7 +351,7 @@ if __name__ == '__main__':
                         help="탐색 종료 날짜")
     parser.add_argument("--search_type", type=str, default="게시글 + 댓글",
                         help="Search type: 제목만 or 게시글 + 댓글")
-    parser.add_argument("--keyword", type=str, default="팰리세이드",
+    parser.add_argument("--keyword", type=str, default="",
                         help="Keyword for searching")
     parser.add_argument("--select_all", type=str, default="",
                         help="상세 검색 중 '다음 단어 모두 포함' 항목")
