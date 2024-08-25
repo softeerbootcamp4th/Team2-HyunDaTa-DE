@@ -8,6 +8,9 @@
 ## 시연 영상
 - [Youtube Link](https://www.youtube.com/watch?v=bik-lCagBaU)
 
+## 프로젝트 파이프라인
+<img src="https://github.com/user-attachments/assets/14b910e7-7072-41c0-979d-995bcbebe07a">
+
 
 ## 기능 
 
