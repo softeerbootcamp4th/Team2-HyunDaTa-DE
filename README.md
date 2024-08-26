@@ -9,7 +9,7 @@
 - [Youtube Link](https://www.youtube.com/watch?v=bik-lCagBaU)
 
 ## 프로젝트 파이프라인
-<img src="https://github.com/user-attachments/assets/0097e94a-63cc-4ff9-96f5-1ac0c4b9bc2d">
+<img src="https://github.com/user-attachments/assets/0a4a1305-8f31-4ede-a799-7be178450fbe">
 
 
 ## 기능 
