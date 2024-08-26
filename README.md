@@ -24,7 +24,7 @@
 
 - 과거의 특정 결함 이슈에 대해 뉴스가 보도된 경우, 그 시점을 현재 날짜로 매핑하여 그래프에 수직선으로 표시하였습니다. 이 기능을 통해 과거 뉴스 보도 시점 전후의 데이터 변화를 직관적으로 파악할 수 있습니다. 사용자는 그래프에서 보고 싶은 차량-이슈만 선택적으로 On/Off 할 수 있어, 원하는 정보만 집중적으로 볼 수 있습니다.
 
-### Hot Issue Alarm System
+### Hot Issue Alert System
 
 <img src="https://github.com/user-attachments/assets/53b7ae34-047e-4b15-96d5-36fae816f4b1">
 
@@ -33,7 +33,7 @@
 - 알림에는 차량 결함 및 자체 개발한 서비스 내 핫이슈 탭으로 이동할 수 있는 URL을 함께 제공합니다. 
 
 
-### News Trigger Alarm System
+### News Alert System
 
 <img src="https://github.com/user-attachments/assets/75f8bd89-29c6-41a7-adaf-1d5a78f2a666">
 
